@@ -36,6 +36,8 @@ class FormFieldsTagLib implements GrailsApplicationAware {
 	static final namespace = 'f'
 	static final String BEAN_PAGE_SCOPE_VARIABLE = 'f:with:bean'
 	static final String PREFIX_PAGE_SCOPE_VARIABLE = 'f:with:prefix'
+	static final String FIELD_TEMPLATE_NAME_PAGE_SCOPE_VARIABLE = 'f:with:fieldTemplateName'
+	static final String WIDGET_TEMPLATE_NAME_PAGE_SCOPE_VARIABLE = 'f:with:widgetTemplateName'
 
 	FormFieldsTemplateService formFieldsTemplateService
 	GrailsApplication grailsApplication
@@ -43,15 +45,17 @@ class FormFieldsTagLib implements GrailsApplicationAware {
 
 	def with = { attrs, body ->
 		if (!attrs.bean) throwTagError("Tag [with] is missing required attribute [bean]")
-		def bean = resolveBean(attrs.bean)
-		def prefix = resolvePrefix(attrs.prefix)
 		try {
-			pageScope.variables[BEAN_PAGE_SCOPE_VARIABLE] = bean
-			pageScope.variables[PREFIX_PAGE_SCOPE_VARIABLE] = prefix
+			pageScope.variables[BEAN_PAGE_SCOPE_VARIABLE] = resolveBean(attrs.bean)
+			pageScope.variables[PREFIX_PAGE_SCOPE_VARIABLE] = resolvePrefix(attrs.prefix)
+			pageScope.variables[FIELD_TEMPLATE_NAME_PAGE_SCOPE_VARIABLE] = attrs.remove('fieldTemplateName')
+			pageScope.variables[WIDGET_TEMPLATE_NAME_PAGE_SCOPE_VARIABLE] = attrs.remove('widgetTemplateName')
 			out << body()
 		} finally {
 			pageScope.variables.remove(BEAN_PAGE_SCOPE_VARIABLE)
 			pageScope.variables.remove(PREFIX_PAGE_SCOPE_VARIABLE)
+			pageScope.variables.remove(FIELD_TEMPLATE_NAME_PAGE_SCOPE_VARIABLE)
+			pageScope.variables.remove(WIDGET_TEMPLATE_NAME_PAGE_SCOPE_VARIABLE)
 		}
 	}
 
@@ -78,8 +82,10 @@ class FormFieldsTagLib implements GrailsApplicationAware {
 
 		def bean = attrs.remove('bean')
 		def property = attrs.remove('property')
-		def fieldTemplateName = attrs.remove('fieldTemplateName') ?: 'field'
-        def widgetTemplateName = attrs.remove('widgetTemplateName') ?: 'input'
+		def fieldTemplateName = attrs.remove('fieldTemplateName') ?: 
+		        pageScope.variables[FIELD_TEMPLATE_NAME_PAGE_SCOPE_VARIABLE] ?: 'field'
+        def widgetTemplateName = attrs.remove('widgetTemplateName') ?:
+                pageScope.variables[WIDGET_TEMPLATE_NAME_PAGE_SCOPE_VARIABLE] ?: 'input'
 
         def propertyAccessor = resolveProperty(bean, property)
         if (propertyAccessor.persistentProperty?.embedded) {
@@ -418,7 +424,7 @@ class FormFieldsTagLib implements GrailsApplicationAware {
 			attrs.max = model.constraints.range.to
 		} else {
 			attrs.type = attrs.type ?: "number"
-			if (model.constraints.scale != null) attrs.step = "0.${'0' * (model.constraints.scale - 1)}1"
+			if (model.constraints.scale) attrs.step = "0.${'0' * (model.constraints.scale - 1)}1"
 			if (model.constraints.min != null) attrs.min = model.constraints.min
 			if (model.constraints.max != null) attrs.max = model.constraints.max
 		}

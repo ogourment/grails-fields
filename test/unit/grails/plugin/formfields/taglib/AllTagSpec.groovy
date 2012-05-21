@@ -33,7 +33,7 @@ class AllTagSpec extends AbstractFormFieldsTagLibSpec {
 		def output = applyTemplate('<f:all bean="personInstance"/>', [personInstance: personInstance])
 
 		then:
-		output =~ /\bname\b/
+		output =~ /\bname\b/ // \b = word boundary
 		output =~ /\bpassword\b/
 		output =~ /\bgender\b/
 		output =~ /\bdateOfBirth\b/
@@ -68,4 +68,24 @@ class AllTagSpec extends AbstractFormFieldsTagLibSpec {
 		!output.contains('minor')
 	}
 
+	@Issue('https://github.com/robfletcher/grails-fields/issues/45')
+	void 'all tag doesn\'t render inputs with show'() {
+		given:
+		def notUsed = '*NOT USED*'
+		views["/_fields/default/_field.gsp"] = notUsed 
+		
+		when:
+		def output = applyTemplate('<f:all bean="personInstance" fieldTemplateName="showField" widgetTemplateName="show"/>', [personInstance: personInstance])
+
+		then:
+		!output.contains(notUsed)
+		output =~ /aria-labelledby='name-label'>Bart Simpson</
+		output =~ /aria-labelledby='dateOfBirth-label'>.*\b1987</
+		output =~ /aria-labelledby='address.street-label'>94 Evergreen Terrace</
+		output =~ /aria-labelledby='address.city-label'>Springfield</
+		output =~ /aria-labelledby='address.country-label'>USA</
+		output =~ /aria-labelledby='gender-label'>Male</
+		output =~ /aria-labelledby='minor-label'>true</
+		output =~ /aria-labelledby='password-label'>bartman</
+	}
 }
